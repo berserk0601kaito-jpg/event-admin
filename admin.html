@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>イベント管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- ログイン画面 -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
+      <h1 class="text-2xl font-bold text-center mb-1">🎫 イベント管理</h1>
+      <p class="text-gray-400 text-center text-sm mb-6">管理者パスワードを入力</p>
+      <form onsubmit="login(event)">
+        <input type="password" id="passwordInput" placeholder="パスワード"
+          class="w-full border rounded-lg px-4 py-3 mb-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        <button type="submit"
+          class="w-full bg-blue-600 text-white py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition">
+          ログイン
+        </button>
+        <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden">パスワードが違います</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- メインアプリ -->
+  <div id="mainApp" class="hidden">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <h1 class="text-xl font-bold text-gray-800">🎫 イベント管理</h1>
+        <div class="flex items-center gap-3">
+          <span id="autoRefreshBadge" class="text-xs text-gray-400 hidden">自動更新中</span>
+          <button onclick="logout()" class="text-sm text-gray-400 hover:text-red-500 transition">ログアウト</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6 space-y-5">
+
+      <!-- イベント選択バー -->
+      <div class="bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3">
+        <span class="text-sm font-medium text-gray-600 whitespace-nowrap">イベント:</span>
+        <select id="eventSelect" onchange="onEventChange()"
+          class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-w-0">
+          <option value="">-- イベントを選択 --</option>
+        </select>
+        <button onclick="openModal('newEventModal')"
+          class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">
+          ＋ 新規イベント
+        </button>
+        <button id="deleteEventBtn" onclick="deleteCurrentEvent()"
+          class="hidden border border-red-200 text-red-400 px-3 py-2 rounded-lg text-sm hover:bg-red-50 transition whitespace-nowrap">
+          削除
+        </button>
+      </div>
+
+      <!-- 統計カード -->
+      <div id="statsSection" class="grid grid-cols-3 gap-4 hidden">
+        <div class="bg-white rounded-xl shadow-sm p-4 text-center">
+          <p class="text-3xl font-bold text-gray-800" id="statTotal">0</p>
+          <p class="text-sm text-gray-400 mt-1">👥 登録者数</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4 text-center">
+          <p class="text-3xl font-bold text-green-600" id="statChecked">0</p>
+          <p class="text-sm text-gray-400 mt-1">✅ チェックイン済み</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4 text-center">
+          <p class="text-3xl font-bold text-orange-500" id="statPending">0</p>
+          <p class="text-sm text-gray-400 mt-1">⏳ 未チェックイン</p>
+        </div>
+      </div>
+
+      <!-- 参加者テーブル -->
+      <div id="attendeesSection" class="hidden bg-white rounded-xl shadow-sm">
+        <div class="p-4 border-b flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-base font-semibold text-gray-800">参加者リスト</h2>
+          <div class="flex gap-2 flex-wrap">
+            <input type="text" id="searchInput" placeholder="名前・メールで検索..."
+              oninput="renderAttendees()"
+              class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48">
+            <button onclick="exportCSV()"
+              class="border text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition">
+              CSV
+            </button>
+            <button onclick="openModal('addAttendeeModal')"
+              class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition whitespace-nowrap">
+              ＋ 参加者追加
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                <th class="text-left px-4 py-3 font-medium">名前</th>
+                <th class="text-left px-4 py-3 font-medium">メール</th>
+                <th class="text-center px-4 py-3 font-medium">状態</th>
+                <th class="text-left px-4 py-3 font-medium">チェックイン時刻</th>
+                <th class="text-center px-4 py-3 font-medium">操作</th>
+              </tr>
+            </thead>
+            <tbody id="attendeesTable"></tbody>
+          </table>
+          <div id="emptyState" class="hidden text-center py-14 text-gray-300">
+            <p class="text-5xl mb-3">👤</p>
+            <p class="text-sm">参加者がいません。右上から追加してください。</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- 新規イベントモーダル -->
+  <div id="newEventModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+      <h2 class="text-xl font-bold mb-4">新規イベント作成</h2>
+      <form onsubmit="createEvent(event)">
+        <div class="mb-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">イベント名 *</label>
+          <input type="text" id="eventName" required placeholder="例: Tech Meetup 2024"
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="mb-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">日時</label>
+          <input type="datetime-local" id="eventDate"
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="mb-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">場所</label>
+          <input type="text" id="eventLocation" placeholder="例: 渋谷〇〇ホール"
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-gray-700 mb-1">説明</label>
+          <textarea id="eventDescription" rows="2" placeholder="イベントの説明..."
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button type="button" onclick="closeModal('newEventModal')"
+            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">キャンセル</button>
+          <button type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">作成</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 参加者追加モーダル -->
+  <div id="addAttendeeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+      <h2 class="text-xl font-bold mb-4">参加者追加</h2>
+      <form onsubmit="addAttendee(event)">
+        <div class="mb-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">名前 *</label>
+          <input type="text" id="attendeeName" required placeholder="山田 太郎"
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
+          <input type="email" id="attendeeEmail" placeholder="example@email.com"
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button type="button" onclick="closeModal('addAttendeeModal')"
+            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">キャンセル</button>
+          <button type="submit"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">追加 & QR表示</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- QRコードモーダル -->
+  <div id="qrModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl p-8 w-full max-w-xs text-center">
+      <h2 class="text-lg font-bold mb-0.5" id="qrAttendeeName"></h2>
+      <p class="text-gray-400 text-sm mb-5" id="qrAttendeeEmail"></p>
+      <div id="qrCodeContainer" class="flex justify-center mb-4"></div>
+      <p class="text-xs text-gray-300 break-all mb-5" id="qrUrlText"></p>
+      <button onclick="closeModal('qrModal')"
+        class="w-full py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">閉じる</button>
+    </div>
+  </div>
+
+  <script>
+    let adminPassword = '';
+    let currentEventId = null;
+    let attendees = [];
+    let refreshInterval = null;
+
+    // ---- 認証 ----
+    async function login(e) {
+      e.preventDefault();
+      const pw = document.getElementById('passwordInput').value;
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      if (res.ok) {
+        adminPassword = pw;
+        sessionStorage.setItem('adminPassword', pw);
+        showApp();
+      } else {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('adminPassword');
+      clearInterval(refreshInterval);
+      location.reload();
+    }
+
+    function showApp() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+      loadEvents();
+      refreshInterval = setInterval(() => {
+        if (currentEventId) loadAttendees(currentEventId);
+      }, 30000);
+      document.getElementById('autoRefreshBadge').classList.remove('hidden');
+    }
+
+    function authHeaders() {
+      return { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword };
+    }
+
+    // ---- イベント ----
+    async function loadEvents(selectId = null) {
+      const res = await fetch('/api/events', { headers: authHeaders() });
+      const events = await res.json();
+      const sel = document.getElementById('eventSelect');
+      sel.innerHTML = '<option value="">-- イベントを選択 --</option>';
+      events.forEach(ev => {
+        const opt = document.createElement('option');
+        opt.value = ev.id;
+        opt.textContent = ev.name + (ev.date ? ' (' + new Date(ev.date).toLocaleDateString('ja-JP') + ')' : '');
+        sel.appendChild(opt);
+      });
+      if (selectId) {
+        sel.value = selectId;
+      } else if (events.length > 0) {
+        sel.value = events[0].id;
+      }
+      onEventChange();
+    }
+
+    function onEventChange() {
+      currentEventId = document.getElementById('eventSelect').value;
+      const hasEvent = !!currentEventId;
+      document.getElementById('statsSection').classList.toggle('hidden', !hasEvent);
+      document.getElementById('attendeesSection').classList.toggle('hidden', !hasEvent);
+      document.getElementById('deleteEventBtn').classList.toggle('hidden', !hasEvent);
+      if (hasEvent) loadAttendees(currentEventId);
+    }
+
+    async function createEvent(e) {
+      e.preventDefault();
+      const body = {
+        name: document.getElementById('eventName').value,
+        date: document.getElementById('eventDate').value,
+        location: document.getElementById('eventLocation').value,
+        description: document.getElementById('eventDescription').value,
+      };
+      const res = await fetch('/api/events', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+      if (res.ok) {
+        const newEvent = await res.json();
+        closeModal('newEventModal');
+        ['eventName', 'eventDate', 'eventLocation', 'eventDescription'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        await loadEvents(newEvent.id);
+      }
+    }
+
+    async function deleteCurrentEvent() {
+      const sel = document.getElementById('eventSelect');
+      const name = sel.options[sel.selectedIndex]?.text;
+      if (!confirm(`「${name}」を削除しますか？\n参加者データもすべて削除されます。`)) return;
+      await fetch(`/api/events?id=${currentEventId}`, { method: 'DELETE', headers: authHeaders() });
+      await loadEvents();
+    }
+
+    // ---- 参加者 ----
+    async function loadAttendees(eventId) {
+      const res = await fetch(`/api/attendees?event_id=${eventId}`, { headers: authHeaders() });
+      attendees = await res.json();
+      updateStats();
+      renderAttendees();
+    }
+
+    function updateStats() {
+      const total = attendees.length;
+      const checked = attendees.filter(a => a.checked_in).length;
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statChecked').textContent = checked;
+      document.getElementById('statPending').textContent = total - checked;
+    }
+
+    function renderAttendees() {
+      const q = (document.getElementById('searchInput').value || '').toLowerCase();
+      const list = attendees.filter(a =>
+        a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
+      );
+      const tbody = document.getElementById('attendeesTable');
+      const empty = document.getElementById('emptyState');
+      if (list.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+      tbody.innerHTML = list.map(a => `
+        <tr class="border-t hover:bg-gray-50 transition">
+          <td class="px-4 py-3 font-medium">${esc(a.name)}</td>
+          <td class="px-4 py-3 text-gray-400">${esc(a.email || '—')}</td>
+          <td class="px-4 py-3 text-center">
+            ${a.checked_in
+              ? '<span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">✅ 済み</span>'
+              : '<span class="bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs font-medium">⏳ 未</span>'
+            }
+          </td>
+          <td class="px-4 py-3 text-gray-400 text-xs">
+            ${a.checked_in_at ? new Date(a.checked_in_at).toLocaleString('ja-JP') : '—'}
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex gap-1 justify-center">
+              <button onclick="showQR('${a.id}')"
+                class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs hover:bg-blue-100 transition">QR</button>
+              ${!a.checked_in
+                ? `<button onclick="manualCheckIn('${a.id}')"
+                    class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-100 transition">入場</button>`
+                : ''}
+              <button onclick="deleteAttendee('${a.id}')"
+                class="bg-red-50 text-red-400 px-2 py-1 rounded text-xs hover:bg-red-100 transition">削除</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function addAttendee(e) {
+      e.preventDefault();
+      const body = {
+        event_id: currentEventId,
+        name: document.getElementById('attendeeName').value,
+        email: document.getElementById('attendeeEmail').value,
+      };
+      const res = await fetch('/api/attendees', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+      if (res.ok) {
+        const newAttendee = await res.json();
+        closeModal('addAttendeeModal');
+        document.getElementById('attendeeName').value = '';
+        document.getElementById('attendeeEmail').value = '';
+        await loadAttendees(currentEventId);
+        showQR(newAttendee.id);
+      }
+    }
+
+    async function deleteAttendee(id) {
+      if (!confirm('この参加者を削除しますか？')) return;
+      await fetch(`/api/attendees?id=${id}`, { method: 'DELETE', headers: authHeaders() });
+      await loadAttendees(currentEventId);
+    }
+
+    async function manualCheckIn(id) {
+      const res = await fetch('/api/check-in', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ attendee_id: id })
+      });
+      if (res.ok) await loadAttendees(currentEventId);
+    }
+
+    // ---- QRコード ----
+    function showQR(id) {
+      const a = attendees.find(x => x.id === id);
+      if (!a) return;
+      document.getElementById('qrAttendeeName').textContent = a.name;
+      document.getElementById('qrAttendeeEmail').textContent = a.email || '';
+      const url = `${location.origin}/check-in.html?token=${a.qr_token}`;
+      document.getElementById('qrUrlText').textContent = url;
+      const container = document.getElementById('qrCodeContainer');
+      container.innerHTML = '';
+      new QRCode(container, { text: url, width: 200, height: 200, colorDark: '#111', colorLight: '#fff' });
+      openModal('qrModal');
+    }
+
+    // ---- CSVエクスポート ----
+    function exportCSV() {
+      const header = '名前,メール,チェックイン,チェックイン時刻\n';
+      const rows = attendees.map(a =>
+        `"${a.name}","${a.email || ''}","${a.checked_in ? '済み' : '未'}","${a.checked_in_at ? new Date(a.checked_in_at).toLocaleString('ja-JP') : ''}"`
+      ).join('\n');
+      const blob = new Blob(['﻿' + header + rows], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'attendees.csv';
+      link.click();
+    }
+
+    // ---- モーダル ----
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    document.addEventListener('click', e => {
+      ['newEventModal', 'addAttendeeModal', 'qrModal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (e.target === el) closeModal(id);
+      });
+    });
+
+    // ---- 起動時 ----
+    window.onload = () => {
+      const saved = sessionStorage.getItem('adminPassword');
+      if (saved) {
+        adminPassword = saved;
+        showApp();
+      }
+    };
+  </script>
+</body>
+</html>

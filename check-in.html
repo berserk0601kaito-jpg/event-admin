@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>チェックイン</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-xl p-10 w-full max-w-sm text-center">
+
+    <div id="loading">
+      <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+      <p class="text-gray-400">確認中...</p>
+    </div>
+
+    <div id="success" class="hidden">
+      <div class="text-7xl mb-4">✅</div>
+      <h1 class="text-2xl font-bold text-green-600 mb-1">チェックイン完了！</h1>
+      <p class="text-xl font-semibold text-gray-800 mt-3" id="successName"></p>
+      <p class="text-gray-500 text-sm mt-1" id="successEvent"></p>
+      <p class="text-xs text-gray-300 mt-4" id="successTime"></p>
+    </div>
+
+    <div id="alreadyChecked" class="hidden">
+      <div class="text-7xl mb-4">⚠️</div>
+      <h1 class="text-2xl font-bold text-orange-500 mb-1">チェックイン済み</h1>
+      <p class="text-gray-600 mt-3" id="alreadyName"></p>
+      <p class="text-gray-400 text-sm mt-1" id="alreadyTime"></p>
+    </div>
+
+    <div id="error" class="hidden">
+      <div class="text-7xl mb-4">❌</div>
+      <h1 class="text-2xl font-bold text-red-500 mb-1">無効なQRコード</h1>
+      <p class="text-gray-400 text-sm mt-2">このQRコードは使用できません</p>
+    </div>
+
+  </div>
+
+  <script>
+    const token = new URLSearchParams(window.location.search).get('token');
+
+    async function checkIn() {
+      if (!token) { show('error'); return; }
+      try {
+        const res = await fetch('/api/check-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        const data = await res.json();
+        if (!res.ok) { show('error'); return; }
+
+        if (data.status === 'already_checked_in') {
+          document.getElementById('alreadyName').textContent = data.attendee.name;
+          const t = data.attendee.checked_in_at;
+          document.getElementById('alreadyTime').textContent =
+            t ? new Date(t).toLocaleString('ja-JP') + ' にチェックイン済み' : 'すでにチェックイン済みです';
+          show('alreadyChecked');
+        } else {
+          document.getElementById('successName').textContent = data.attendee.name;
+          document.getElementById('successEvent').textContent = data.attendee.events?.name || '';
+          document.getElementById('successTime').textContent = new Date().toLocaleString('ja-JP');
+          show('success');
+        }
+      } catch { show('error'); }
+    }
+
+    function show(id) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    checkIn();
+  </script>
+</body>
+</html>
