@@ -3,433 +3,510 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>イベント管理</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <title>管理画面 - 学生割引チケット</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: #f5f7fa;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-left h1 { font-size: 17px; font-weight: 700; }
+    .header-left .sub { font-size: 11px; opacity: 0.65; margin-top: 2px; }
+    .header-right { display: flex; gap: 8px; align-items: center; }
+
+    .btn-header {
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Noto Sans JP', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-header:hover { opacity: 0.85; }
+    .btn-refresh {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+    }
+    .btn-export {
+      background: white;
+      border: none;
+      color: #667eea;
+    }
+
+    main { padding: 24px 28px; max-width: 1100px; margin: 0 auto; }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 16px;
+      padding: 22px 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .stat-num  { font-size: 38px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+    .stat-label { font-size: 12px; color: #aaa; }
+    .stat-total  .stat-num { color: #667eea; }
+    .stat-used   .stat-num { color: #e74c3c; }
+    .stat-unused .stat-num { color: #27ae60; }
+
+    /* Filter + search bar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 7px 18px;
+      border: 2px solid #e0e0e0;
+      background: white;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Noto Sans JP', sans-serif;
+      color: #777;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-btn.active {
+      border-color: #667eea;
+      background: #667eea;
+      color: white;
+    }
+    .search-input {
+      margin-left: auto;
+      padding: 8px 14px;
+      border: 2px solid #e8e8e8;
+      border-radius: 20px;
+      font-size: 13px;
+      font-family: 'Noto Sans JP', sans-serif;
+      color: #333;
+      outline: none;
+      width: 200px;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: #667eea; }
+
+    /* Table */
+    .table-wrap {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f8f9ff; }
+    th {
+      padding: 13px 18px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #aaa;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #eee;
+      white-space: nowrap;
+    }
+    td {
+      padding: 13px 18px;
+      font-size: 14px;
+      border-bottom: 1px solid #f2f2f2;
+      color: #333;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-unused { background: #e8f8f0; color: #27ae60; }
+    .badge-used   { background: #fff0ee; color: #e74c3c; }
+
+    .row-num { color: #ccc; font-size: 12px; }
+    .name-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+
+    .empty-state {
+      text-align: center;
+      padding: 56px 20px;
+      color: #ccc;
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+    .empty-state p { font-size: 13px; }
+
+    .auto-refresh-note {
+      text-align: right;
+      font-size: 11px;
+      color: #bbb;
+      margin-top: 10px;
+    }
+
+    /* 校舎フィルター */
+    .school-filter-wrap {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      padding: 16px 20px;
+      margin-bottom: 14px;
+    }
+    .filter-section-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #aaa;
+      margin-bottom: 10px;
+    }
+    .school-filter-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .school-btn {
+      padding: 7px 14px;
+      border: 2px solid #e8e8e8;
+      background: white;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Noto Sans JP', sans-serif;
+      color: #777;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .school-btn:hover { border-color: #667eea; color: #667eea; }
+    .school-btn.active {
+      border-color: #667eea;
+      background: #667eea;
+      color: white;
+    }
+
+    /* QRセクション */
+    .qr-section {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      padding: 28px;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+    .qr-image-wrap {
+      flex-shrink: 0;
+      background: #f8f9ff;
+      border-radius: 12px;
+      padding: 12px;
+      border: 2px solid #e8ecff;
+    }
+    .qr-image-wrap img {
+      width: 140px;
+      height: 140px;
+      display: block;
+    }
+    .qr-info h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 10px;
+    }
+    .qr-url {
+      background: #f5f7fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #667eea;
+      word-break: break-all;
+      margin-bottom: 10px;
+    }
+    .qr-desc {
+      font-size: 12px;
+      color: #aaa;
+      line-height: 1.7;
+    }
+    .admin-url-box {
+      background: #fff8f0;
+      border: 1px solid #ffd8a8;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #e67e22;
+      word-break: break-all;
+      margin-top: 8px;
+    }
+    .url-label {
+      font-size: 11px;
+      color: #aaa;
+      margin-bottom: 4px;
+      font-family: 'Noto Sans JP', sans-serif;
+    }
+    @media (max-width: 640px) {
+      .qr-section { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .qr-image-wrap img { width: 120px; height: 120px; }
+    }
+
+    @media (max-width: 640px) {
+      main { padding: 16px; }
+      .stats { gap: 8px; }
+      .stat-num { font-size: 28px; }
+      th:nth-child(5), td:nth-child(5),
+      th:nth-child(6), td:nth-child(6) { display: none; }
+      .search-input { width: 140px; }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body>
 
-  <!-- ログイン画面 -->
-  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
-      <h1 class="text-2xl font-bold text-center mb-1">🎫 イベント管理</h1>
-      <p class="text-gray-400 text-center text-sm mb-6">管理者パスワードを入力</p>
-      <form onsubmit="login(event)">
-        <input type="password" id="passwordInput" placeholder="パスワード"
-          class="w-full border rounded-lg px-4 py-3 mb-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-        <button type="submit"
-          class="w-full bg-blue-600 text-white py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition">
-          ログイン
-        </button>
-        <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden">パスワードが違います</p>
-      </form>
+<header>
+  <div class="header-left">
+    <h1>🎫 管理画面</h1>
+    <div class="sub">学生割引チケット</div>
+  </div>
+  <div class="header-right">
+    <button class="btn-header btn-refresh" onclick="loadTickets()">↻ 更新</button>
+    <a class="btn-header btn-export" href="/api/admin/export">⬇ Excel出力</a>
+  </div>
+</header>
+
+<main>
+  <!-- QRコード & URL -->
+  <div class="qr-section">
+    <div class="qr-image-wrap">
+      <img id="qrImg" src="/api/qr" alt="QRコード">
+    </div>
+    <div class="qr-info">
+      <h2>📱 学生配布用 QRコード</h2>
+      <div class="url-label">チケット登録URL（学生用）</div>
+      <div class="qr-url" id="studentUrl">読み込み中...</div>
+      <div class="url-label">管理画面URL（先生用）</div>
+      <div class="admin-url-box" id="adminUrl">読み込み中...</div>
+      <div class="qr-desc">QRコードを印刷またはスクリーン表示して<br>学生に配布してください</div>
     </div>
   </div>
 
-  <!-- メインアプリ -->
-  <div id="mainApp" class="hidden">
-    <header class="bg-white shadow-sm sticky top-0 z-40">
-      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <h1 class="text-xl font-bold text-gray-800">🎫 イベント管理</h1>
-        <div class="flex items-center gap-3">
-          <span id="autoRefreshBadge" class="text-xs text-gray-400 hidden">自動更新中</span>
-          <button onclick="logout()" class="text-sm text-gray-400 hover:text-red-500 transition">ログアウト</button>
-        </div>
-      </div>
-    </header>
-
-    <main class="max-w-6xl mx-auto px-4 py-6 space-y-5">
-
-      <!-- イベント選択バー -->
-      <div class="bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3">
-        <span class="text-sm font-medium text-gray-600 whitespace-nowrap">イベント:</span>
-        <select id="eventSelect" onchange="onEventChange()"
-          class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-w-0">
-          <option value="">-- イベントを選択 --</option>
-        </select>
-        <button onclick="openModal('newEventModal')"
-          class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition whitespace-nowrap">
-          ＋ 新規イベント
-        </button>
-        <button id="deleteEventBtn" onclick="deleteCurrentEvent()"
-          class="hidden border border-red-200 text-red-400 px-3 py-2 rounded-lg text-sm hover:bg-red-50 transition whitespace-nowrap">
-          削除
-        </button>
-      </div>
-
-      <!-- 統計カード -->
-      <div id="statsSection" class="grid grid-cols-3 gap-4 hidden">
-        <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-          <p class="text-3xl font-bold text-gray-800" id="statTotal">0</p>
-          <p class="text-sm text-gray-400 mt-1">👥 登録者数</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-          <p class="text-3xl font-bold text-green-600" id="statChecked">0</p>
-          <p class="text-sm text-gray-400 mt-1">✅ チェックイン済み</p>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm p-4 text-center">
-          <p class="text-3xl font-bold text-orange-500" id="statPending">0</p>
-          <p class="text-sm text-gray-400 mt-1">⏳ 未チェックイン</p>
-        </div>
-      </div>
-
-      <!-- 参加者テーブル -->
-      <div id="attendeesSection" class="hidden bg-white rounded-xl shadow-sm">
-        <div class="p-4 border-b flex flex-wrap items-center justify-between gap-3">
-          <h2 class="text-base font-semibold text-gray-800">参加者リスト</h2>
-          <div class="flex gap-2 flex-wrap">
-            <input type="text" id="searchInput" placeholder="名前・メールで検索..."
-              oninput="renderAttendees()"
-              class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48">
-            <button onclick="exportCSV()"
-              class="border text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition">
-              CSV
-            </button>
-            <button onclick="openModal('addAttendeeModal')"
-              class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition whitespace-nowrap">
-              ＋ 参加者追加
-            </button>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                <th class="text-left px-4 py-3 font-medium">名前</th>
-                <th class="text-left px-4 py-3 font-medium">メール</th>
-                <th class="text-center px-4 py-3 font-medium">状態</th>
-                <th class="text-left px-4 py-3 font-medium">チェックイン時刻</th>
-                <th class="text-center px-4 py-3 font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody id="attendeesTable"></tbody>
-          </table>
-          <div id="emptyState" class="hidden text-center py-14 text-gray-300">
-            <p class="text-5xl mb-3">👤</p>
-            <p class="text-sm">参加者がいません。右上から追加してください。</p>
-          </div>
-        </div>
-      </div>
-
-    </main>
-  </div>
-
-  <!-- 新規イベントモーダル -->
-  <div id="newEventModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
-    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
-      <h2 class="text-xl font-bold mb-4">新規イベント作成</h2>
-      <form onsubmit="createEvent(event)">
-        <div class="mb-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">イベント名 *</label>
-          <input type="text" id="eventName" required placeholder="例: Tech Meetup 2024"
-            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="mb-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">日時</label>
-          <input type="datetime-local" id="eventDate"
-            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="mb-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">場所</label>
-          <input type="text" id="eventLocation" placeholder="例: 渋谷〇〇ホール"
-            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="mb-5">
-          <label class="block text-sm font-medium text-gray-700 mb-1">説明</label>
-          <textarea id="eventDescription" rows="2" placeholder="イベントの説明..."
-            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-        </div>
-        <div class="flex gap-2 justify-end">
-          <button type="button" onclick="closeModal('newEventModal')"
-            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">キャンセル</button>
-          <button type="submit"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">作成</button>
-        </div>
-      </form>
+  <div class="stats">
+    <div class="stat-card stat-total">
+      <div class="stat-num" id="totalCount">−</div>
+      <div class="stat-label" id="statLabel">発行数</div>
+    </div>
+    <div class="stat-card stat-used">
+      <div class="stat-num" id="usedCount">−</div>
+      <div class="stat-label">使用済み</div>
+    </div>
+    <div class="stat-card stat-unused">
+      <div class="stat-num" id="unusedCount">−</div>
+      <div class="stat-label">未使用</div>
     </div>
   </div>
 
-  <!-- 参加者追加モーダル -->
-  <div id="addAttendeeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
-    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
-      <h2 class="text-xl font-bold mb-4">参加者追加</h2>
-      <form onsubmit="addAttendee(event)">
-        <div class="mb-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">名前 *</label>
-          <input type="text" id="attendeeName" required placeholder="山田 太郎"
-            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="mb-5">
-          <label class="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
-          <input type="email" id="attendeeEmail" placeholder="example@email.com"
-            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex gap-2 justify-end">
-          <button type="button" onclick="closeModal('addAttendeeModal')"
-            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">キャンセル</button>
-          <button type="submit"
-            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">追加 & QR表示</button>
-        </div>
-      </form>
+  <!-- 校舎フィルター -->
+  <div class="school-filter-wrap">
+    <div class="filter-section-label">🏫 校舎で絞り込む</div>
+    <div class="school-filter-row" id="schoolFilterRow">
+      <button class="school-btn active" data-school="">すべての校舎</button>
+      <button class="school-btn" data-school="BG大通本校">大通本校</button>
+      <button class="school-btn" data-school="BG札幌駅前校">札幌駅前校</button>
+      <button class="school-btn" data-school="BG円山公園駅前">円山公園駅前</button>
+      <button class="school-btn" data-school="BG石山通り校">石山通り校</button>
+      <button class="school-btn" data-school="BG琴似校">琴似校</button>
+      <button class="school-btn" data-school="BG宮の沢校">宮の沢校</button>
+      <button class="school-btn" data-school="BG北24条校">北24条校</button>
+      <button class="school-btn" data-school="BG麻生校">麻生校</button>
+      <button class="school-btn" data-school="BG新札幌校">新札幌校</button>
+      <button class="school-btn" data-school="BG白石ガーデンプレイス校">白石GP校</button>
+      <button class="school-btn" data-school="BG月寒中央校">月寒中央校</button>
     </div>
   </div>
 
-  <!-- QRコードモーダル -->
-  <div id="qrModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
-    <div class="bg-white rounded-2xl p-8 w-full max-w-xs text-center">
-      <h2 class="text-lg font-bold mb-0.5" id="qrAttendeeName"></h2>
-      <p class="text-gray-400 text-sm mb-5" id="qrAttendeeEmail"></p>
-      <div id="qrCodeContainer" class="flex justify-center mb-4"></div>
-      <p class="text-xs text-gray-300 break-all mb-5" id="qrUrlText"></p>
-      <button onclick="closeModal('qrModal')"
-        class="w-full py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition">閉じる</button>
-    </div>
+  <!-- 状態フィルター＋検索 -->
+  <div class="toolbar">
+    <button class="filter-btn active" data-filter="all">すべて</button>
+    <button class="filter-btn" data-filter="unused">未使用</button>
+    <button class="filter-btn" data-filter="used">使用済み</button>
+    <input class="search-input" id="searchInput" type="text" placeholder="名前で検索...">
   </div>
 
-  <script>
-    let adminPassword = '';
-    let currentEventId = null;
-    let attendees = [];
-    let refreshInterval = null;
-
-    // ---- 認証 ----
-    async function login(e) {
-      e.preventDefault();
-      const pw = document.getElementById('passwordInput').value;
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw })
-      });
-      if (res.ok) {
-        adminPassword = pw;
-        sessionStorage.setItem('adminPassword', pw);
-        showApp();
-      } else {
-        document.getElementById('loginError').classList.remove('hidden');
-      }
-    }
-
-    function logout() {
-      sessionStorage.removeItem('adminPassword');
-      clearInterval(refreshInterval);
-      location.reload();
-    }
-
-    function showApp() {
-      document.getElementById('loginScreen').classList.add('hidden');
-      document.getElementById('mainApp').classList.remove('hidden');
-      loadEvents();
-      refreshInterval = setInterval(() => {
-        if (currentEventId) loadAttendees(currentEventId);
-      }, 30000);
-      document.getElementById('autoRefreshBadge').classList.remove('hidden');
-    }
-
-    function authHeaders() {
-      return { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword };
-    }
-
-    // ---- イベント ----
-    async function loadEvents(selectId = null) {
-      const res = await fetch('/api/events', { headers: authHeaders() });
-      const events = await res.json();
-      const sel = document.getElementById('eventSelect');
-      sel.innerHTML = '<option value="">-- イベントを選択 --</option>';
-      events.forEach(ev => {
-        const opt = document.createElement('option');
-        opt.value = ev.id;
-        opt.textContent = ev.name + (ev.date ? ' (' + new Date(ev.date).toLocaleDateString('ja-JP') + ')' : '');
-        sel.appendChild(opt);
-      });
-      if (selectId) {
-        sel.value = selectId;
-      } else if (events.length > 0) {
-        sel.value = events[0].id;
-      }
-      onEventChange();
-    }
-
-    function onEventChange() {
-      currentEventId = document.getElementById('eventSelect').value;
-      const hasEvent = !!currentEventId;
-      document.getElementById('statsSection').classList.toggle('hidden', !hasEvent);
-      document.getElementById('attendeesSection').classList.toggle('hidden', !hasEvent);
-      document.getElementById('deleteEventBtn').classList.toggle('hidden', !hasEvent);
-      if (hasEvent) loadAttendees(currentEventId);
-    }
-
-    async function createEvent(e) {
-      e.preventDefault();
-      const body = {
-        name: document.getElementById('eventName').value,
-        date: document.getElementById('eventDate').value,
-        location: document.getElementById('eventLocation').value,
-        description: document.getElementById('eventDescription').value,
-      };
-      const res = await fetch('/api/events', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
-      if (res.ok) {
-        const newEvent = await res.json();
-        closeModal('newEventModal');
-        ['eventName', 'eventDate', 'eventLocation', 'eventDescription'].forEach(id => {
-          document.getElementById(id).value = '';
-        });
-        await loadEvents(newEvent.id);
-      }
-    }
-
-    async function deleteCurrentEvent() {
-      const sel = document.getElementById('eventSelect');
-      const name = sel.options[sel.selectedIndex]?.text;
-      if (!confirm(`「${name}」を削除しますか？\n参加者データもすべて削除されます。`)) return;
-      await fetch(`/api/events?id=${currentEventId}`, { method: 'DELETE', headers: authHeaders() });
-      await loadEvents();
-    }
-
-    // ---- 参加者 ----
-    async function loadAttendees(eventId) {
-      const res = await fetch(`/api/attendees?event_id=${eventId}`, { headers: authHeaders() });
-      attendees = await res.json();
-      updateStats();
-      renderAttendees();
-    }
-
-    function updateStats() {
-      const total = attendees.length;
-      const checked = attendees.filter(a => a.checked_in).length;
-      document.getElementById('statTotal').textContent = total;
-      document.getElementById('statChecked').textContent = checked;
-      document.getElementById('statPending').textContent = total - checked;
-    }
-
-    function renderAttendees() {
-      const q = (document.getElementById('searchInput').value || '').toLowerCase();
-      const list = attendees.filter(a =>
-        a.name.toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q)
-      );
-      const tbody = document.getElementById('attendeesTable');
-      const empty = document.getElementById('emptyState');
-      if (list.length === 0) {
-        tbody.innerHTML = '';
-        empty.classList.remove('hidden');
-        return;
-      }
-      empty.classList.add('hidden');
-      tbody.innerHTML = list.map(a => `
-        <tr class="border-t hover:bg-gray-50 transition">
-          <td class="px-4 py-3 font-medium">${esc(a.name)}</td>
-          <td class="px-4 py-3 text-gray-400">${esc(a.email || '—')}</td>
-          <td class="px-4 py-3 text-center">
-            ${a.checked_in
-              ? '<span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">✅ 済み</span>'
-              : '<span class="bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs font-medium">⏳ 未</span>'
-            }
-          </td>
-          <td class="px-4 py-3 text-gray-400 text-xs">
-            ${a.checked_in_at ? new Date(a.checked_in_at).toLocaleString('ja-JP') : '—'}
-          </td>
-          <td class="px-4 py-3">
-            <div class="flex gap-1 justify-center">
-              <button onclick="showQR('${a.id}')"
-                class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs hover:bg-blue-100 transition">QR</button>
-              ${!a.checked_in
-                ? `<button onclick="manualCheckIn('${a.id}')"
-                    class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-100 transition">入場</button>`
-                : ''}
-              <button onclick="deleteAttendee('${a.id}')"
-                class="bg-red-50 text-red-400 px-2 py-1 rounded text-xs hover:bg-red-100 transition">削除</button>
-            </div>
-          </td>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>氏名</th>
+          <th>所属校舎</th>
+          <th>状態</th>
+          <th>登録日時</th>
+          <th>使用日時</th>
         </tr>
-      `).join('');
-    }
+      </thead>
+      <tbody id="ticketTable">
+        <tr><td colspan="6"><div class="empty-state"><div class="icon">⏳</div><p>読み込み中...</p></div></td></tr>
+      </tbody>
+    </table>
+  </div>
 
-    function esc(s) {
-      return String(s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
+  <div class="auto-refresh-note" id="lastUpdated"></div>
+</main>
 
-    async function addAttendee(e) {
-      e.preventDefault();
-      const body = {
-        event_id: currentEventId,
-        name: document.getElementById('attendeeName').value,
-        email: document.getElementById('attendeeEmail').value,
-      };
-      const res = await fetch('/api/attendees', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
-      if (res.ok) {
-        const newAttendee = await res.json();
-        closeModal('addAttendeeModal');
-        document.getElementById('attendeeName').value = '';
-        document.getElementById('attendeeEmail').value = '';
-        await loadAttendees(currentEventId);
-        showQR(newAttendee.id);
-      }
-    }
+<script>
+  let allTickets  = [];
+  let filterMode  = 'all';   // all / used / unused
+  let schoolFilter = '';      // '' = すべて、それ以外は校舎名
+  let searchQuery = '';
 
-    async function deleteAttendee(id) {
-      if (!confirm('この参加者を削除しますか？')) return;
-      await fetch(`/api/attendees?id=${id}`, { method: 'DELETE', headers: authHeaders() });
-      await loadAttendees(currentEventId);
-    }
-
-    async function manualCheckIn(id) {
-      const res = await fetch('/api/check-in', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ attendee_id: id })
-      });
-      if (res.ok) await loadAttendees(currentEventId);
-    }
-
-    // ---- QRコード ----
-    function showQR(id) {
-      const a = attendees.find(x => x.id === id);
-      if (!a) return;
-      document.getElementById('qrAttendeeName').textContent = a.name;
-      document.getElementById('qrAttendeeEmail').textContent = a.email || '';
-      const url = `${location.origin}/check-in.html?token=${a.qr_token}`;
-      document.getElementById('qrUrlText').textContent = url;
-      const container = document.getElementById('qrCodeContainer');
-      container.innerHTML = '';
-      new QRCode(container, { text: url, width: 200, height: 200, colorDark: '#111', colorLight: '#fff' });
-      openModal('qrModal');
-    }
-
-    // ---- CSVエクスポート ----
-    function exportCSV() {
-      const header = '名前,メール,チェックイン,チェックイン時刻\n';
-      const rows = attendees.map(a =>
-        `"${a.name}","${a.email || ''}","${a.checked_in ? '済み' : '未'}","${a.checked_in_at ? new Date(a.checked_in_at).toLocaleString('ja-JP') : ''}"`
-      ).join('\n');
-      const blob = new Blob(['﻿' + header + rows], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'attendees.csv';
-      link.click();
-    }
-
-    // ---- モーダル ----
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-    document.addEventListener('click', e => {
-      ['newEventModal', 'addAttendeeModal', 'qrModal'].forEach(id => {
-        const el = document.getElementById(id);
-        if (e.target === el) closeModal(id);
-      });
+  // 状態フィルター
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelector('.filter-btn.active').classList.remove('active');
+      btn.classList.add('active');
+      filterMode = btn.dataset.filter;
+      renderTable();
     });
+  });
 
-    // ---- 起動時 ----
-    window.onload = () => {
-      const saved = sessionStorage.getItem('adminPassword');
-      if (saved) {
-        adminPassword = saved;
-        showApp();
-      }
-    };
-  </script>
+  // 校舎フィルター
+  document.querySelectorAll('.school-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelector('.school-btn.active').classList.remove('active');
+      btn.classList.add('active');
+      schoolFilter = btn.dataset.school;
+      updateStats();
+      renderTable();
+    });
+  });
+
+  // 名前検索
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    searchQuery = e.target.value.trim();
+    renderTable();
+  });
+
+  async function loadTickets() {
+    try {
+      const res  = await fetch('/api/admin/tickets');
+      allTickets = await res.json();
+
+      const now = new Date().toLocaleString('ja-JP');
+      document.getElementById('lastUpdated').textContent = `最終更新: ${now}　(30秒ごとに自動更新)`;
+
+      updateStats();
+      renderTable();
+    } catch {
+      document.getElementById('ticketTable').innerHTML =
+        '<tr><td colspan="6"><div class="empty-state"><div class="icon">⚠️</div><p>読み込みに失敗しました</p></div></td></tr>';
+    }
+  }
+
+  // 統計カードを現在の校舎フィルターに合わせて更新
+  function updateStats() {
+    const base = schoolFilter
+      ? allTickets.filter(t => t.school === schoolFilter)
+      : allTickets;
+
+    document.getElementById('totalCount').textContent  = base.length;
+    document.getElementById('usedCount').textContent   = base.filter(t => t.used).length;
+    document.getElementById('unusedCount').textContent = base.filter(t => !t.used).length;
+    document.getElementById('statLabel').textContent   = schoolFilter ? `${schoolFilter}` : '発行数（全校舎）';
+  }
+
+  function renderTable() {
+    let list = allTickets;
+
+    // 校舎で絞り込み
+    if (schoolFilter) list = list.filter(t => t.school === schoolFilter);
+
+    // 状態で絞り込み
+    if (filterMode === 'used')   list = list.filter(t => t.used);
+    if (filterMode === 'unused') list = list.filter(t => !t.used);
+
+    // 名前検索
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(t =>
+        t.kanji.includes(searchQuery) ||
+        t.furigana.toLowerCase().includes(q)
+      );
+    }
+
+    if (list.length === 0) {
+      document.getElementById('ticketTable').innerHTML =
+        '<tr><td colspan="6"><div class="empty-state"><div class="icon">📋</div><p>データがありません</p></div></td></tr>';
+      return;
+    }
+
+    document.getElementById('ticketTable').innerHTML = list.map((t, i) => `
+      <tr>
+        <td class="row-num">${i + 1}</td>
+        <td>
+          <div style="font-weight:600">${esc(t.kanji)}</div>
+          <div class="name-sub">${esc(t.furigana)}</div>
+        </td>
+        <td style="font-size:13px;color:#555">${esc(t.school || '−')}</td>
+        <td>
+          <span class="badge ${t.used ? 'badge-used' : 'badge-unused'}">
+            ${t.used ? '使用済み' : '未使用'}
+          </span>
+        </td>
+        <td style="font-size:13px;color:#888">${fmtDateTime(t.createdAt)}</td>
+        <td style="font-size:13px;color:#888">${t.usedAt ? fmtDateTime(t.usedAt) : '−'}</td>
+      </tr>`).join('');
+  }
+
+  function fmtDateTime(iso) {
+    if (!iso) return '−';
+    return new Date(iso).toLocaleString('ja-JP', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  loadTickets();
+  setInterval(loadTickets, 30000); // 30秒ごとに自動更新
+
+  // URL表示（現在のホストから自動生成）
+  (function() {
+    const host = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const base = `${window.location.protocol}//${host}${port}`;
+    document.getElementById('studentUrl').textContent = `${base}/`;
+    document.getElementById('adminUrl').textContent   = `${base}/admin.html`;
+  })();
+</script>
 </body>
 </html>

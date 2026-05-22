@@ -1,4 +1,9 @@
 {
-  "name": "event-admin",
-  "version": "1.0.0"
+  "name": "digital-ticket",
+  "version": "1.0.0",
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "qrcode": "^1.5.4",
+    "uuid": "^9.0.0"
+  }
 }

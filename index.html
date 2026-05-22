@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学生割引チケット</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      animation: slideUp 0.4s ease;
+      overflow: hidden;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ヘッダー */
+    .card-header {
+      padding: 32px 36px 0;
+      text-align: center;
+    }
+    .icon { font-size: 48px; margin-bottom: 12px; }
+    h1 { font-size: 20px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+    .subtitle { font-size: 12px; color: #bbb; }
+
+    /* タブ */
+    .tabs {
+      display: flex;
+      margin: 24px 0 0;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    .tab {
+      flex: 1;
+      padding: 12px 8px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Noto Sans JP', sans-serif;
+      color: #bbb;
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    /* フォームパネル */
+    .panel { display: none; padding: 28px 36px 36px; }
+    .panel.active { display: block; }
+
+    .form-group { margin-bottom: 20px; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 7px;
+    }
+    label .required { color: #e74c3c; margin-left: 2px; }
+    input[type="text"] {
+      width: 100%;
+      padding: 13px 15px;
+      border: 2px solid #eee;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: 'Noto Sans JP', sans-serif;
+      color: #1a1a2e;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: #667eea; }
+    input[type="text"]::placeholder { color: #ccc; }
+    select {
+      width: 100%;
+      padding: 13px 15px;
+      border: 2px solid #eee;
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: 'Noto Sans JP', sans-serif;
+      color: #1a1a2e;
+      background: white;
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23aaa' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    select:focus { border-color: #667eea; }
+    select option[value=""] { color: #aaa; }
+    .hint { font-size: 11px; color: #ccc; margin-top: 5px; }
+
+    .error-msg {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      color: #c53030;
+      padding: 11px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Noto Sans JP', sans-serif;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102,126,234,0.35);
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, #2ecc71, #27ae60);
+      color: white;
+      box-shadow: 0 4px 15px rgba(46,204,113,0.35);
+    }
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <div class="icon">🎫</div>
+      <h1>学生割引チケット</h1>
+      <p class="subtitle">QRコードからチケットを受け取れます</p>
+    </div>
+
+    <!-- タブ切り替え -->
+    <div class="tabs">
+      <button class="tab active" data-tab="new">初めての方</button>
+      <button class="tab"        data-tab="find">登録済みの方</button>
+    </div>
+
+    <!-- 初めての方：新規登録 -->
+    <div class="panel active" id="panel-new">
+      <div class="error-msg" id="newError"></div>
+      <div class="form-group">
+        <label>氏名（漢字）<span class="required">*</span></label>
+        <input type="text" id="newKanji" placeholder="例：山田太郎" autocomplete="off" autocorrect="off">
+      </div>
+      <div class="form-group">
+        <label>ふりがな<span class="required">*</span></label>
+        <input type="text" id="newFurigana" placeholder="例：やまだたろう" autocomplete="off" autocorrect="off">
+      </div>
+      <div class="form-group">
+        <label>所属校舎<span class="required">*</span></label>
+        <select id="newSchool">
+          <option value="">── 校舎を選択してください ──</option>
+          <option>BG大通本校</option>
+          <option>BG札幌駅前校</option>
+          <option>BG円山公園駅前</option>
+          <option>BG石山通り校</option>
+          <option>BG琴似校</option>
+          <option>BG宮の沢校</option>
+          <option>BG北24条校</option>
+          <option>BG麻生校</option>
+          <option>BG新札幌校</option>
+          <option>BG白石ガーデンプレイス校</option>
+          <option>BG月寒中央校</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="newBtn">チケットを受け取る →</button>
+    </div>
+
+    <!-- 登録済みの方：名前で検索 -->
+    <div class="panel" id="panel-find">
+      <div class="error-msg" id="findError"></div>
+      <div class="form-group">
+        <label>氏名（漢字）<span class="required">*</span></label>
+        <input type="text" id="findKanji" placeholder="例：山田 太郎" autocomplete="off" autocorrect="off">
+      </div>
+      <div class="form-group">
+        <label>ふりがな（任意）</label>
+        <input type="text" id="findFurigana" placeholder="例：やまだ たろう" autocomplete="off" autocorrect="off">
+        <p class="hint">同姓同名がいる場合はふりがなも入力してください</p>
+      </div>
+      <button class="btn btn-secondary" id="findBtn">チケットを表示する →</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'student_ticket_id';
+
+    // ── localStorage に保存済みIDがあれば即リダイレクト ──
+    const savedId = localStorage.getItem(STORAGE_KEY);
+    if (savedId) {
+      document.body.style.visibility = 'hidden';
+      window.location.replace(`/ticket.html?id=${savedId}`);
+    }
+
+    // ── タブ切り替え ──
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ── 新規登録 ──
+    document.getElementById('newBtn').addEventListener('click', async () => {
+      const kanji    = document.getElementById('newKanji').value.trim();
+      const furigana = document.getElementById('newFurigana').value.trim();
+      const school   = document.getElementById('newSchool').value.trim();
+      const btn      = document.getElementById('newBtn');
+      const errEl    = document.getElementById('newError');
+      errEl.style.display = 'none';
+
+      if (!kanji || !furigana || !school) {
+        errEl.textContent = 'すべての項目を入力してください';
+        errEl.style.display = 'block';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = '処理中...';
+
+      try {
+        const res  = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kanji, furigana, school })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'エラーが発生しました');
+
+        localStorage.setItem(STORAGE_KEY, data.id);
+        window.location.href = `/ticket.html?id=${data.id}`;
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'チケットを受け取る →';
+      }
+    });
+
+    // ── 名前でチケットを検索 ──
+    document.getElementById('findBtn').addEventListener('click', async () => {
+      const kanji    = document.getElementById('findKanji').value.trim();
+      const furigana = document.getElementById('findFurigana').value.trim();
+      const btn      = document.getElementById('findBtn');
+      const errEl    = document.getElementById('findError');
+      errEl.style.display = 'none';
+
+      if (!kanji) {
+        errEl.textContent = '氏名（漢字）を入力してください';
+        errEl.style.display = 'block';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = '検索中...';
+
+      try {
+        const res  = await fetch('/api/find', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kanji, furigana })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'エラーが発生しました');
+
+        // 見つかったのでlocalStorageにも保存して次回は自動表示
+        localStorage.setItem(STORAGE_KEY, data.id);
+        window.location.href = `/ticket.html?id=${data.id}`;
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'チケットを表示する →';
+      }
+    });
+  </script>
+</body>
+</html>
