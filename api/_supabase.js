@@ -1,7 +1,13 @@
-const { createClient } = require('@supabase/supabase-js');
+function getHeaders() {
+  return {
+    'apikey': process.env.SUPABASE_SERVICE_KEY,
+    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+    'Content-Type': 'application/json',
+  };
+}
 
-function getSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+function getBaseUrl() {
+  return `${process.env.SUPABASE_URL}/rest/v1`;
 }
 
 function checkAuth(req, res) {
@@ -18,4 +24,4 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Password');
 }
 
-module.exports = { getSupabase, checkAuth, setCors };
+module.exports = { getHeaders, getBaseUrl, checkAuth, setCors };
