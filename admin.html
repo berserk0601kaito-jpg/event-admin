@@ -364,6 +364,7 @@
           <th>#</th>
           <th>氏名</th>
           <th>所属校舎</th>
+          <th>担任</th>
           <th>状態</th>
           <th>登録日時</th>
           <th>使用日時</th>
@@ -473,6 +474,7 @@
           <div class="name-sub">${esc(t.furigana)}</div>
         </td>
         <td style="font-size:13px;color:#555">${esc(t.school || '−')}</td>
+        <td style="font-size:13px;color:#555">${esc(t.tanin || '−')}</td>
         <td>
           <span class="badge ${t.used ? 'badge-used' : 'badge-unused'}">
             ${t.used ? '使用済み' : '未使用'}

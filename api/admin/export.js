@@ -16,6 +16,7 @@ module.exports = async function handler(req, res) {
     { header: '氏名（漢字）', key: 'kanji',     width: 16 },
     { header: 'ふりがな',     key: 'furigana',  width: 16 },
     { header: '所属校舎',     key: 'school',    width: 16 },
+    { header: '担任',         key: 'tanin',     width: 14 },
     { header: '使用状況',     key: 'status',    width: 12 },
     { header: '登録日時',     key: 'createdAt', width: 24 },
     { header: '使用日時',     key: 'usedAt',    width: 24 },
@@ -26,7 +27,7 @@ module.exports = async function handler(req, res) {
 
   tickets.forEach(t => {
     const row = ws.addRow({
-      kanji: t.kanji, furigana: t.furigana, school: t.school || '−',
+      kanji: t.kanji, furigana: t.furigana, school: t.school || '−', tanin: t.tanin || '−',
       status: t.used ? '使用済み' : '未使用',
       createdAt: toJST(t.created_at),
       usedAt: t.used_at ? toJST(t.used_at) : '−',

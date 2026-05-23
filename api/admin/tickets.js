@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   if (!r.ok) return res.status(500).json({ error: data });
 
   return res.status(200).json(data.map(t => ({
-    id: t.id, kanji: t.kanji, furigana: t.furigana, school: t.school,
+    id: t.id, kanji: t.kanji, furigana: t.furigana, school: t.school, tanin: t.tanin,
     used: t.used, createdAt: t.created_at, usedAt: t.used_at
   })));
 };

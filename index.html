@@ -191,6 +191,10 @@
           <option>BG月寒中央校</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>担任<span class="required">*</span></label>
+        <input type="text" id="newTanin" placeholder="例：田中先生" autocomplete="off" autocorrect="off">
+      </div>
       <button class="btn btn-primary" id="newBtn">チケットを受け取る →</button>
     </div>
 
@@ -235,11 +239,12 @@
       const kanji    = document.getElementById('newKanji').value.trim();
       const furigana = document.getElementById('newFurigana').value.trim();
       const school   = document.getElementById('newSchool').value.trim();
+      const tanin    = document.getElementById('newTanin').value.trim();
       const btn      = document.getElementById('newBtn');
       const errEl    = document.getElementById('newError');
       errEl.style.display = 'none';
 
-      if (!kanji || !furigana || !school) {
+      if (!kanji || !furigana || !school || !tanin) {
         errEl.textContent = 'すべての項目を入力してください';
         errEl.style.display = 'block';
         return;
@@ -251,7 +256,7 @@
         const res  = await fetch('/api/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ kanji, furigana, school })
+          body: JSON.stringify({ kanji, furigana, school, tanin })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'エラーが発生しました');
