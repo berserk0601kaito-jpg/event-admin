@@ -367,10 +367,11 @@
           <th>状態</th>
           <th>登録日時</th>
           <th>使用日時</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="ticketTable">
-        <tr><td colspan="6"><div class="empty-state"><div class="icon">⏳</div><p>読み込み中...</p></div></td></tr>
+        <tr><td colspan="7"><div class="empty-state"><div class="icon">⏳</div><p>読み込み中...</p></div></td></tr>
       </tbody>
     </table>
   </div>
@@ -423,7 +424,7 @@
       renderTable();
     } catch {
       document.getElementById('ticketTable').innerHTML =
-        '<tr><td colspan="6"><div class="empty-state"><div class="icon">⚠️</div><p>読み込みに失敗しました</p></div></td></tr>';
+        '<tr><td colspan="7"><div class="empty-state"><div class="icon">⚠️</div><p>読み込みに失敗しました</p></div></td></tr>';
     }
   }
 
@@ -460,7 +461,7 @@
 
     if (list.length === 0) {
       document.getElementById('ticketTable').innerHTML =
-        '<tr><td colspan="6"><div class="empty-state"><div class="icon">📋</div><p>データがありません</p></div></td></tr>';
+        '<tr><td colspan="7"><div class="empty-state"><div class="icon">📋</div><p>データがありません</p></div></td></tr>';
       return;
     }
 
@@ -479,6 +480,12 @@
         </td>
         <td style="font-size:13px;color:#888">${fmtDateTime(t.createdAt)}</td>
         <td style="font-size:13px;color:#888">${t.usedAt ? fmtDateTime(t.usedAt) : '−'}</td>
+        <td>
+          <button onclick="deleteTicket('${esc(t.id)}', '${esc(t.kanji)}')"
+            style="background:#fff0ee;color:#e74c3c;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">
+            🗑 削除
+          </button>
+        </td>
       </tr>`).join('');
   }
 
@@ -494,6 +501,16 @@
     return String(s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function deleteTicket(id, name) {
+    if (!confirm(`「${name}」を削除しますか？\nこの操作は取り消せません。`)) return;
+    const res = await fetch(`/api/admin/delete?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadTickets();
+    } else {
+      alert('削除に失敗しました');
+    }
   }
 
   loadTickets();
