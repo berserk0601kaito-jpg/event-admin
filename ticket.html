@@ -252,6 +252,11 @@
     async function loadTicket() {
       try {
         const res = await fetch(`/api/ticket/${ticketId}`);
+        if (res.status === 404) {
+          localStorage.removeItem('student_ticket_id');
+          window.location.replace('/');
+          return;
+        }
         if (!res.ok) throw new Error();
         renderTicket(await res.json());
       } catch {
